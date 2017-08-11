@@ -163,7 +163,8 @@ Mat reBuiltImage(Mat image, Mat  backImage)
 	gray_image.convertTo(backImg, CV_32F);
 	gray_image.convertTo(backImage, image.type());
 	cvtColor(image, gray_image, CV_BGR2GRAY);
-	medianBlur(gray_image, gray_image, 3);//均值滤波
+	//medianBlur(gray_image, gray_image, 3);//均值滤波
+	GaussianBlur(gray_image, gray_image, Size(21, 21), 0, 0);
 	absdiff(gray_image, backImage, imageOutput);
 	threshold(imageOutput, imageOutput, nThreshold, 255, THRESH_BINARY_INV);
 	accumulateWeighted(gray_image, backImg, learningRate);
@@ -182,10 +183,9 @@ Mat reBuiltBackgroundImage(Mat backImage)
 	Mat backImageGRY = Mat::zeros(backImage.size(), backImage.type());
 	Mat backImage2 = Mat::zeros(backImage.size(), backImage.type());
 	cvtColor(backImage, backImageGRY, CV_BGRA2GRAY);
-	//threshold(gray_image, imageOutput, 100, 255, THRESH_BINARY);
-	//threshold(backImageGRY, backImage2, 80, 255, THRESH_BINARY);
-	//return backImage2;
-	GaussianBlur(backImageGRY, backImage2, Size(21, 21), 0, 0);
+	//medianBlur(backImageGRY, backImageGRY, 3);//均值滤波
+	//return backImageGRY;
+	GaussianBlur(backImageGRY, backImage2, Size(21, 21), 0, 0);	
 	return backImage2;
 }
 

@@ -30,7 +30,7 @@ int landSize = 10;					//降落范围的大小
 
 Mat backImg, image, tem, reImg;		//backImg是背景
 double learningRate = 0.1;	// 控制背景累积学习的速率
-int nThreshold = 100;	// 前景提取的阈值
+int nThreshold = 60;	// 前景提取的阈值
 
 
 void init();			//初始化窗口
