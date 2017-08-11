@@ -29,7 +29,7 @@ using namespace cv;
 
 class CHOutputClass {
 public:
-	CHOutputClass(Point Poi) {//Îö¹¹º¯Êı£¬´«ÈëÄ¿±êËùÔÚµÄµã
+	CHOutputClass(Point Poi) {//ææ„å‡½æ•°ï¼Œä¼ å…¥ç›®æ ‡æ‰€åœ¨çš„ç‚¹
 		outputPoi = Poi;
 	}
 	int getInfoTurnLeft(int Poi_x);
@@ -45,9 +45,11 @@ static int IS_LOCATED = 0;
 static int sumOfPixel = 0;
 static int X0, X1, Y0, Y1;
 static Point lastPoint1 = (-1, -1), lastPoint2 = (-1, -1), lastPoint3 = (-1, -1);
+Point3f actual;
 int CH1 = -2, CH2, CH3;
 int landFlag = 0;
 int landSize = 10;
+int high = 1;
 
 void drawrReferenceLine(Mat image, Point Poi, int size);
 Point getLocationFromImage(Mat image);
@@ -65,6 +67,8 @@ void drawrLandARR(Mat image, Point Poi, int landFlag);
 int getCH1();
 int getCH2();
 int getCH3();
+Mat A = Mat::ones(3, 3, CV_32FC3);
+Mat B = Mat::ones(3, 1, CV_32FC3);
 
 int getCH1()
 {
@@ -110,20 +114,12 @@ void CHOutput(Point Poi) {
 	}
 
 }
-
-/**************************************************************/
-//º¯ÊıÃû³Æ£ºadjustARR()
-//º¯Êı¹¦ÄÜ£º¸ù¾İ×·×Ùµ½µÄÄ¿±ê´óĞ¡£¬È·¶¨ÏÂÒ»´Î±éÀúÇøÓò
-//´«Èë²ÎÊı£ºÎŞ
-//·µ»Ø²ÎÊı£ºÎŞ
-//×îºóĞŞ¸ÄÊ±¼ä£º2016Äê10ÔÂ19ÈÕ14£º43                            
-/**************************************************************/
 void adjustARR()
 {
 	double x, y;
 	int size = 5;
 	x = sumOfPixel;
-	y = sizeLocation * sizeLocation * 4;
+	y = sizeLocation*sizeLocation * 4;
 	while ((int(y / x) != size) && (sumOfPixel != 0))
 	{
 		if (y / x > size)
@@ -144,31 +140,31 @@ void adjustARR()
 	}
 
 }
-/**************************************************************/
-//º¯ÊıÃû³Æ£ºtrackROI
-//º¯Êı¹¦ÄÜ£º¼ÆËãÄ¿±êµÄÎ»ÖÃ¡¢½«Ä¿±ê±ê¶¨³öÀ´£¬²¢·µ»ØÄ¿±êµÄ×ø±ê
-//´«Èë²ÎÊı£ºimage,imageOutput, lastLocation
-//·µ»Ø²ÎÊı£ºPoi £¨¼ÆËã³öµÄÄ¿±ê¼¸ºÎÖĞĞÄ£©
-//×îºóĞŞ¸ÄÊ±¼ä£º2017Äê8ÔÂ10ÈÕ13£º50                            
-/**************************************************************/
 
 Point trackROI(Mat image, Mat imageOutput, Point lastLocation)
 {
 	Point Poi;
 	if (IS_LOCATED)
 	{
-		//Èç¹û×·×Ùµ½Ä¿±ê£¬¼ÆËã³öÕæÊµµÄ¼¸ºÎÖĞĞÄ
-		adjustARR();												//ËõĞ¡±éÀúÇøÓò
-		Poi = getLocationFromArea(imageOutput, lastLocation);		//ÔÚ×·×ÙÇøÓòÖĞËÑË÷Ä¿±êµÄÎ»ÖÃ
+
+		adjustARR();
+		Poi = getLocationFromArea(imageOutput, lastLocation);
 		realPoi = Poi;
+		//		Poi = reviseLocation(Poi);
+
+
 	}
 	if (!IS_LOCATED)
 	{
-		Poi = getLocationFromImage(imageOutput);					//ÔÚÕû¸öÍ¼ÏñÖĞËÑË÷Ä¿±êµÄÎ»ÖÃ 
+		//////////////////////////////////////////////////////////////////////////////////
+		//2017/2/15ä¿®æ”¹
+		//å¦‚æœç›®æ ‡ä¸åœ¨ä¸‹é™åŒºåŸŸï¼Œåˆ™è¿›è¡Œå‰åå·¦å³è°ƒæ•´
+		//////////////////////////////////////////////////////////////////////////////////
+		Poi = getLocationFromImage(imageOutput);
+		//	Poi = reviseLocation(Poi);
 		realPoi = Poi;
 
 	}
-	
 	drawrReferenceLine(image, Poi, sizeLocation);
 	drawrLandARR(image, Point(IMG_SIZE_X / 2, IMG_SIZE_Y / 2), landFlag);
 	drawFilledCircle(image, Point(IMG_SIZE_X / 2, IMG_SIZE_Y / 2));
@@ -178,75 +174,87 @@ Point trackROI(Mat image, Mat imageOutput, Point lastLocation)
 	drawLine(image, Poi, Point(Poi.x, Poi.y + CH2 * 20));
 	drawLine(image, Poi, Point(IMG_SIZE_X / 2, IMG_SIZE_Y / 2));
 
-/*
-vector<vector<Point>> contours;
-vector<Vec4i> hierarchy;
-findContours(imageOutput, contours, hierarchy, CV_RETR_TREE, CV_CHAIN_APPROX_SIMPLE, Point(0, 0));
-
-//Mat result(imageOutput.size(), CV_8U, Scalar(255));
-cv::drawContours(image, contours,
--1, // draw all contours
-Scalar(0), // in black
-2); // with a thickness of 2
-*/
-
 	imshow("imageOutput", imageOutput);
 	imshow("imageORI", image);
 	return(Poi);
 
 }
 
+/**************************************************************/
+//å‡½æ•°åç§°ï¼šcoord
+//å‡½æ•°åŠŸèƒ½ï¼šå®é™…åæ ‡
+//ä¼ å…¥å‚æ•°ï¼šPoi gps.alt
+//æœ€åä¿®æ”¹æ—¶é—´ï¼š2017å¹´08æœˆ11æ—¥23ï¼š20                         
+/**************************************************************/
+void coord(Point Poi, int high) {
+	double f = 0.012;//ç„¦è· å•ä½m
+	Point pixel;//ä¸­å¿ƒåƒç´ ç‚¹çš„åæ ‡
+	
+
+	pixel.x = Poi.x;
+	pixel.y = Poi.y;
+
+	actual.z = high;
+	actual.x = (double)((actual.z * pixel.x) / f)/100000;
+	actual.y = (double)((actual.z * pixel.y) / f)/100000;
+
+	cout << "x: " << actual.x << "  y: " << actual.y << "  z: " << actual.z << endl;
+}
+
 Mat backImg, image, tem, reImg;
+double learningRate = 0.01;	// æ§åˆ¶èƒŒæ™¯ç´¯ç§¯å­¦ä¹ çš„é€Ÿç‡
+int nThreshold = 100;	// å‰æ™¯æå–çš„é˜ˆå€¼
 
 /**************************************************************/
-//º¯ÊıÃû³Æ£ºreBuiltImage
-//º¯Êı¹¦ÄÜ£º´«Èëµ¥Ö¡Í¼Ïñ£¬½«±¾ÕëÍ¼ÏñÈ¥³ı±³¾°²¢ÇÒ
-//          ´¦Àí³É¸ß¶Ô±È¶ÈµÄºÚ°×Í¼ÏñÊä³ö
-//´«Èë²ÎÊı£ºimage,backImage
-//·µ»Ø²ÎÊı£ºimageOutput £¨´¦ÀíºóµÄÍ¼£©
-//×îºóĞŞ¸ÄÊ±¼ä£º2016Äê10ÔÂ19ÈÕ14£º43                            
+//å‡½æ•°åç§°ï¼šreBuiltImage
+//å‡½æ•°åŠŸèƒ½ï¼šä¼ å…¥å•å¸§å›¾åƒï¼Œå°†æœ¬é’ˆå›¾åƒå»é™¤èƒŒæ™¯å¹¶ä¸”
+//          å¤„ç†æˆé«˜å¯¹æ¯”åº¦çš„é»‘ç™½å›¾åƒè¾“å‡º
+//ä¼ å…¥å‚æ•°ï¼šimage,backImage
+//è¿”å›å‚æ•°ï¼šimageOutput ï¼ˆå¤„ç†åçš„å›¾ï¼‰
+//æœ€åä¿®æ”¹æ—¶é—´ï¼š2016å¹´10æœˆ19æ—¥14ï¼š43                            
 /**************************************************************/
 Mat reBuiltImage(Mat image, Mat  backImage)
 {
 	Mat gray_image = Mat::zeros(backImg.size(), image.type());
 	Mat imageOutput = Mat::zeros(backImg.size(), image.type());
+	backImg.convertTo(backImage, CV_8U);
 	cvtColor(image, gray_image, CV_BGRA2GRAY);
 	medianBlur(gray_image, gray_image, 3);
 	//threshold(gray_image, imageOutput, 100, 255, THRESH_BINARY);
 	absdiff(gray_image, backImage, imageOutput);
-	threshold(imageOutput, imageOutput, 100, 255, THRESH_BINARY);
-	accumulate(gray_image, backImg);
+	threshold(imageOutput, imageOutput, nThreshold, 255, THRESH_BINARY);
+	//accumulateWeighted(gray_image, backImg, learningRate);//?
+
+
 	return imageOutput;
 }
 
 /**************************************************************/
-//º¯ÊıÃû³Æ£ºreBuiltBackgroundImage
-//º¯Êı¹¦ÄÜ£º¶Ô´«ÈëµÄ±³¾°Í¼½øĞĞ»Ò¶È»¯´¦Àí£¬²¢½øĞĞ¸ßË¹ÂË²¨
-//´«Èë²ÎÊı£ºbackImage£¨±³¾°Í¼£©
-//·µ»Ø²ÎÊı£ºbackImage2 £¨´¦ÀíºóµÄ±³¾°Í¼£©
-//×îºóĞŞ¸ÄÊ±¼ä£º2017Äê8ÔÂ10ÈÕ11£º38                            
+//å‡½æ•°åç§°ï¼šreBuiltBackgroundImage
+//å‡½æ•°åŠŸèƒ½ï¼šå¯¹ä¼ å…¥çš„èƒŒæ™¯å›¾è¿›è¡Œç°åº¦åŒ–å¤„ç†ï¼ŒäºŒå€¼åŒ–å¤„ç†
+//ä¼ å…¥å‚æ•°ï¼šbackImageï¼ˆèƒŒæ™¯å›¾ï¼‰
+//è¿”å›å‚æ•°ï¼šbackImage2 ï¼ˆå¤„ç†åçš„èƒŒæ™¯å›¾ï¼‰
+//æœ€åä¿®æ”¹æ—¶é—´ï¼š2016å¹´10æœˆ24æ—¥11ï¼š24                            
 /**************************************************************/
 Mat reBuiltBackgroundImage(Mat backImage)
 {
 	Mat backImageGRY = Mat::zeros(backImage.size(), backImage.type());
-	Mat backImage2 = Mat::zeros(backImage.size(), backImage.type());
+
 	cvtColor(backImage, backImageGRY, CV_BGRA2GRAY);
 	//threshold(gray_image, imageOutput, 100, 255, THRESH_BINARY);
-	//threshold(backImageGRY, backImage2, 80, 255, THRESH_BINARY);
-	//return backImage2;
-	GaussianBlur(backImageGRY, backImage2, Size(21, 21), 0, 0);
-	return backImage2;
+	//threshold(backImageGRY, backImage2, 150, 255, THRESH_BINARY);
+	return backImageGRY;
 }
 
 
 
 /**************************************************************/
-//º¯ÊıÃû³Æ£ºreviseLocation
-//º¯Êı¹¦ÄÜ£º¶Ô´«ÈëµÄ×ø±ê½øĞĞÂË²¨´¦Àí£¬¼õÉÙ
-//          ×ø±êµã¶¶¶¯
-//´«Èë²ÎÊı£ºbaseLocation£¨Î´¾­ÂË²¨µÄ×ø±ê£©
-//·µ»Ø²ÎÊı£ºPoint£¨xx,yy£© £¨ÂË²¨ºóµÄ×ø±êÖµ£©
-//×îºóĞŞ¸ÄÊ±¼ä£º2016Äê10ÔÂ24ÈÕ11£º24                            
+//å‡½æ•°åç§°ï¼šreviseLocation
+//å‡½æ•°åŠŸèƒ½ï¼šå¯¹ä¼ å…¥çš„åæ ‡è¿›è¡Œæ»¤æ³¢å¤„ç†ï¼Œå‡å°‘
+//          åæ ‡ç‚¹æŠ–åŠ¨
+//ä¼ å…¥å‚æ•°ï¼šbaseLocationï¼ˆæœªç»æ»¤æ³¢çš„åæ ‡ï¼‰
+//è¿”å›å‚æ•°ï¼šPointï¼ˆxx,yyï¼‰ ï¼ˆæ»¤æ³¢åçš„åæ ‡å€¼ï¼‰
+//æœ€åä¿®æ”¹æ—¶é—´ï¼š2016å¹´10æœˆ24æ—¥11ï¼š24                            
 /**************************************************************/
 Point reviseLocation(Point baseLocation)
 {
@@ -300,11 +308,11 @@ Point reviseLocation(Point baseLocation)
 
 
 /**************************************************************/
-//º¯ÊıÃû³Æ£ºgetLocationFromImage
-//º¯Êı¹¦ÄÜ£ºÔÚÕû¸öÍ¼ÏñÖĞËÑË÷Ä¿±êµÄÎ»ÖÃ 
-//´«Èë²ÎÊı£ºimage£¨¶şÖµ»¯È¥±³¾°µÄÍ¼£©
-//·µ»Ø²ÎÊı£ºPoi £¨²éÕÒµ½µÄ×ø±ê£©
-//×îºóĞŞ¸ÄÊ±¼ä£º2016Äê10ÔÂ24ÈÕ11£º24                            
+//å‡½æ•°åç§°ï¼šgetLocationFromImage
+//å‡½æ•°åŠŸèƒ½ï¼šåœ¨æ•´ä¸ªå›¾åƒä¸­æœç´¢ç›®æ ‡çš„ä½ç½® 
+//ä¼ å…¥å‚æ•°ï¼šimageï¼ˆäºŒå€¼åŒ–å»èƒŒæ™¯çš„å›¾ï¼‰
+//è¿”å›å‚æ•°ï¼šPoi ï¼ˆæŸ¥æ‰¾åˆ°çš„åæ ‡ï¼‰
+//æœ€åä¿®æ”¹æ—¶é—´ï¼š2016å¹´10æœˆ24æ—¥11ï¼š24                            
 /**************************************************************/
 Point getLocationFromImage(Mat image)
 {
@@ -320,6 +328,7 @@ Point getLocationFromImage(Mat image)
 				y = y + i;
 				x = x + j;
 				sumOfPixel++;
+
 			}
 		}
 	if (sumOfPixel != 0)
@@ -328,20 +337,23 @@ Point getLocationFromImage(Mat image)
 		Poi.y = y / sumOfPixel;
 		IS_LOCATED = 1;
 
+
 	}
 	else
 	{
 		IS_LOCATED = 0;
 	}
+
 	return Poi;
 }
 
+
 /**************************************************************/
-//º¯ÊıÃû³Æ£ºgetLocationFromImage
-//º¯Êı¹¦ÄÜ£ºÔÚ×·×ÙÇøÓòÖĞËÑË÷Ä¿±êµÄÎ»ÖÃ 
-//´«Èë²ÎÊı£ºimage £¨¶şÖµ»¯È¥±³¾°µÄÍ¼£© x0,x1,y0,y1(×·×ÙÇøÓò×ø±ê)
-//·µ»Ø²ÎÊı£ºPoi £¨²éÕÒµ½µÄ×ø±ê£©
-//×îºóĞŞ¸ÄÊ±¼ä£º2016Äê10ÔÂ24ÈÕ11£º24                            
+//å‡½æ•°åç§°ï¼šgetLocationFromImage
+//å‡½æ•°åŠŸèƒ½ï¼šåœ¨è¿½è¸ªåŒºåŸŸä¸­æœç´¢ç›®æ ‡çš„ä½ç½® 
+//ä¼ å…¥å‚æ•°ï¼šimage ï¼ˆäºŒå€¼åŒ–å»èƒŒæ™¯çš„å›¾ï¼‰ x0,x1,y0,y1(è¿½è¸ªåŒºåŸŸåæ ‡)
+//è¿”å›å‚æ•°ï¼šPoi ï¼ˆæŸ¥æ‰¾åˆ°çš„åæ ‡ï¼‰
+//æœ€åä¿®æ”¹æ—¶é—´ï¼š2016å¹´10æœˆ24æ—¥11ï¼š24                            
 /**************************************************************/
 Point getLocationFromArea(Mat image, Point lastLocation)
 {
@@ -384,14 +396,17 @@ Point getLocationFromArea(Mat image, Point lastLocation)
 }
 
 /**************************************************************/
-//º¯ÊıÃû³Æ£ºdrawrReferenceLine
-//º¯Êı¹¦ÄÜ£ºÔÚÍ¼ÏñÉÏ»­Ò»¸öÕı·½ĞÎ·½¿ò.ÒÔ´«ÈëµãÎªÔ²ĞÄ£¬sizeÎª±ß³¤
-//´«Èë²ÎÊı£ºimage  Poi
-//×îºóĞŞ¸ÄÊ±¼ä£º2016Äê10ÔÂ24ÈÕ11£º24                            
+//å‡½æ•°åç§°ï¼šdrawrReferenceLine
+//å‡½æ•°åŠŸèƒ½ï¼šåœ¨å›¾åƒä¸Šç”»ä¸€ä¸ªæ­£æ–¹å½¢æ–¹æ¡†.ä»¥ä¼ å…¥ç‚¹ä¸ºåœ†å¿ƒï¼Œsizeä¸ºè¾¹é•¿
+//ä¼ å…¥å‚æ•°ï¼šimage  Poi
+//æœ€åä¿®æ”¹æ—¶é—´ï¼š2016å¹´10æœˆ24æ—¥11ï¼š24                            
 /**************************************************************/
 void drawrReferenceLine(Mat image, Point Poi, int size)
 {
+
 	drawFilledCircle(image, Poi);
+	coord(Poi, high);
+	cout << Poi.x << "    " << Poi.y << endl;
 	int SIZE;
 	if (IS_LOCATED)
 		SIZE = size;
@@ -409,10 +424,10 @@ void drawrReferenceLine(Mat image, Point Poi, int size)
 }
 
 /**************************************************************/
-//º¯ÊıÃû³Æ£ºdrawrLandARR
-//º¯Êı¹¦ÄÜ£ºÔÚÍ¼ÏñÖĞĞÄ»­Ò»¸öÕı·½ĞÎ·½¿ò.ÒÔ´«ÈëµãÎªÔ²ĞÄ£¬sizeÎª±ß³¤
-//´«Èë²ÎÊı£ºimage  Poi
-//×îºóĞŞ¸ÄÊ±¼ä£º2016Äê10ÔÂ24ÈÕ11£º24                            
+//å‡½æ•°åç§°ï¼šdrawrLandARR
+//å‡½æ•°åŠŸèƒ½ï¼šåœ¨å›¾åƒä¸­å¿ƒç”»ä¸€ä¸ªæ­£æ–¹å½¢æ–¹æ¡†.ä»¥ä¼ å…¥ç‚¹ä¸ºåœ†å¿ƒï¼Œsizeä¸ºè¾¹é•¿
+//ä¼ å…¥å‚æ•°ï¼šimage  Poi
+//æœ€åä¿®æ”¹æ—¶é—´ï¼š2016å¹´10æœˆ24æ—¥11ï¼š24                            
 /**************************************************************/
 void drawrLandARR(Mat image, Point Poi, int landFlag)
 {
@@ -431,10 +446,10 @@ void drawrLandARR(Mat image, Point Poi, int landFlag)
 }
 
 /**************************************************************/
-//º¯ÊıÃû³Æ£ºdrawrReferenceLine
-//º¯Êı¹¦ÄÜ£ºÔÚÍ¼ÏñÉÏ»­Ò»¸öÊµĞÄÔ²µã
-//´«Èë²ÎÊı£ºimage  Poi
-//×îºóĞŞ¸ÄÊ±¼ä£º2016Äê10ÔÂ24ÈÕ11£º24                            
+//å‡½æ•°åç§°ï¼šdrawrReferenceLine
+//å‡½æ•°åŠŸèƒ½ï¼šåœ¨å›¾åƒä¸Šç”»ä¸€ä¸ªå®å¿ƒåœ†ç‚¹
+//ä¼ å…¥å‚æ•°ï¼šimage  Poi
+//æœ€åä¿®æ”¹æ—¶é—´ï¼š2016å¹´10æœˆ24æ—¥11ï¼š24                            
 /**************************************************************/
 void drawFilledCircle(Mat img, Point center)
 {
@@ -447,13 +462,15 @@ void drawFilledCircle(Mat img, Point center)
 		Scalar(0, 0, 255),
 		thickness,
 		lineType);
+
 }
 
+
 /**************************************************************/
-//º¯ÊıÃû³Æ£ºdrawrReferenceLine
-//º¯Êı¹¦ÄÜ£ºÔÚÍ¼ÏñÉÏ»­Ò»ÌõÏß
-//´«Èë²ÎÊı£ºimage  Poi
-//×îºóĞŞ¸ÄÊ±¼ä£º2016Äê10ÔÂ24ÈÕ11£º24                            
+//å‡½æ•°åç§°ï¼šdrawrReferenceLine
+//å‡½æ•°åŠŸèƒ½ï¼šåœ¨å›¾åƒä¸Šç”»ä¸€æ¡çº¿
+//ä¼ å…¥å‚æ•°ï¼šimage  Poi
+//æœ€åä¿®æ”¹æ—¶é—´ï¼š2016å¹´10æœˆ24æ—¥11ï¼š24                            
 /**************************************************************/
 void drawLandLine(Mat img, Point start, Point end, int landFlag)
 {
@@ -477,12 +494,11 @@ void drawLandLine(Mat img, Point start, Point end, int landFlag)
 		thickness,
 		lineType);
 }
-
 /**************************************************************/
-//º¯ÊıÃû³Æ£ºdrawrReferenceLine
-//º¯Êı¹¦ÄÜ£ºÔÚÍ¼ÏñÉÏ»­Ò»ÌõÏß
-//´«Èë²ÎÊı£ºimage  Poi
-//×îºóĞŞ¸ÄÊ±¼ä£º2016Äê10ÔÂ24ÈÕ11£º24                            
+//å‡½æ•°åç§°ï¼šdrawrReferenceLine
+//å‡½æ•°åŠŸèƒ½ï¼šåœ¨å›¾åƒä¸Šç”»ä¸€æ¡çº¿
+//ä¼ å…¥å‚æ•°ï¼šimage  Poi
+//æœ€åä¿®æ”¹æ—¶é—´ï¼š2016å¹´10æœˆ24æ—¥11ï¼š24                            
 /**************************************************************/
 void drawLine(Mat img, Point start, Point end)
 {
@@ -508,6 +524,9 @@ void drawLine(Mat img, Point start, Point end)
 }
 
 
+
+
+
 int nFrmNum = 0, count = 0;
 Point lastLocation, location;
 Mat pFrame;
@@ -524,16 +543,21 @@ void init()
 
 
 
-void  backinit()//³õÊ¼»¯±³¾°
+void  backinit()//åˆå§‹åŒ–èƒŒæ™¯
 {
-	capture >> pFrame;
+	int k=0;
+	while (k < 60)
+	{
+		capture >> pFrame;
+		k++;
+	}
 	IMG_SIZE_X = pFrame.cols;
 	IMG_SIZE_Y = pFrame.rows;
 	CENTER_X = IMG_SIZE_X / 2;
 	CENTER_Y = IMG_SIZE_Y / 2;
 	tem = pFrame;
 	tem.copyTo(backImg);
-	backImg = reBuiltBackgroundImage(backImg);			//¶Ô±³¾°½øĞĞ»Ò¶È»¯¡¢¸ßË¹ÂË²¨
+	backImg = reBuiltBackgroundImage(backImg);
 	imshow("BACK", backImg);
 
 }
@@ -542,52 +566,82 @@ void frame()
 {
 	capture >> pFrame;
 	image = pFrame;
-	reImg = reBuiltImage(image, backImg);				//±³¾°²î·Ö
-	//¶ÔÍ¼Ïñ×öÅòÕÍ
+	reImg = reBuiltImage(image, backImg);
+	//å¯¹å›¾åƒåšè†¨èƒ€
 	int g_nStructElementSize = 3;
 	Mat element = getStructuringElement(MORPH_RECT, Size(2 * g_nStructElementSize + 1, 2 * g_nStructElementSize + 1), Point(g_nStructElementSize, g_nStructElementSize));
 	dilate(reImg, reImg, element);
+	location = trackROI(image, reImg, lastLocation);
 
-	location = trackROI(image, reImg, lastLocation);		//¼ÆËãÄ¿±êµÄÎ»ÖÃ¡¢±ê¶¨Ä¿±ê
+
+
 	lastLocation = location;
+
+	//if (waitKey(1) >= 0) break;
 }
 
 int  wait_key()
 {
 	if (waitKey(1) >= 0) return 0;
+
 }
 
-//Êä³ö×óÓÒÒÆ¶¯ĞÅºÅ
+/*
+//æ˜¯å¦åœ¨è½åœ°ç‚¹çš„åŒ—è¾¹ï¼Œå‘å‡ºå‰åç§»åŠ¨æŒ‡ä»¤
+//ä¼ å…¥å‚æ•°int CHOutput()
+int getInfo::NorthHeadingFlag(int northFlag) {
+if (northFlag == northOrWestFlag)
+return 1;
+else
+return 0;
+
+}
+//æ˜¯å¦åœ¨è½åœ°ç‚¹çš„è¥¿è¾¹ï¼Œå‘å‡ºå·¦å³ç§»åŠ¨æŒ‡ä»¤
+//ä¼ å…¥å‚æ•°int CHOutput()
+int getInfo::WestHeadingFlag(int westFlag) {
+if (westFlag == northOrWestFlag)
+return 1;
+else
+return 0;
+}
+
+*/
+//è¾“å‡ºå·¦å³ç§»åŠ¨ä¿¡å·
 int CHOutputClass::getInfoTurnLeft(int Poi_x) {
-	if (Poi_x > CENTER_X + landSize)//Èç¹ûÄ¿±êÔÚÂäµØµãÓÒ±ßÔò½øĞĞ×óÒÆ¶¯·µ»ØÖµÎª1
+	if (Poi_x > CENTER_X + landSize)//å¦‚æœç›®æ ‡åœ¨è½åœ°ç‚¹å³è¾¹åˆ™è¿›è¡Œå·¦ç§»åŠ¨è¿”å›å€¼ä¸º1
 		return LEFT_OR_BACKWORD;
-	if (Poi_x > CENTER_X - landSize)//·µ»ØÎª0ÔòÓÒÒÆ
+	if (Poi_x > CENTER_X - landSize)//è¿”å›ä¸º0åˆ™å³ç§»
 		return RIGHT_OR_FORWORD;
 	else
-		return OK;					//·µ»ØÎª2Ôò×óÓÒ²»ÒÆ¶¯
+		return OK;					//è¿”å›ä¸º2åˆ™å·¦å³ä¸ç§»åŠ¨
 }
 int CHOutputClass::getInfoForword(int Poi_y) {
-	if (Poi_y > CENTER_Y + landSize)//·µ»Ø1ÏòÇ°ÒÆ¶¯
+	if (Poi_y > CENTER_Y + landSize)//è¿”å›1å‘å‰ç§»åŠ¨
 		return LEFT_OR_BACKWORD;
-	if (Poi_y < CENTER_Y + landSize)//·µ»Ø2ÏòºóÒÆ¶¯
+	if (Poi_y < CENTER_Y + landSize)//è¿”å›2å‘åç§»åŠ¨
 		return RIGHT_OR_FORWORD;
 	else
-		return OK;					//·µ»Ø2²»ÒÆ¶¯
+		return OK;					//è¿”å›2ä¸ç§»åŠ¨
 }
 
 int main()
 {
 	int flag = 0;
-	init();							//³õÊ¼»¯´°¿Ú
-	backinit();						//³õÊ¼»¯±³¾°
+	init();
+	backinit();
 	cout << IMG_SIZE_X << endl;
 	cout << IMG_SIZE_Y << endl;
+
 	while (1)
 	{
+
+
 		frame();
 		flag = wait_key();
 		if (!flag) break;
+
 	}
+
 	return 0;
 
 }
